@@ -1,5 +1,7 @@
 # ghostrelay
 
+A WebSocket relay that tunnels traffic through shared hosting — connects restricted-network clients to the free internet via a Node.js relay and xray VLESS.
+
 > **Disclaimer:** This project is intended for research and educational purposes only. It demonstrates WebSocket-based TCP tunneling techniques over shared hosting infrastructure. Users are responsible for ensuring their use complies with all applicable laws and the terms of service of any platforms involved. The authors assume no liability for misuse.
 
 ---
