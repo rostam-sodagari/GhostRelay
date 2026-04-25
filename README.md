@@ -34,6 +34,13 @@ No restricted network needed. The relay on shared hosting is the only middleman.
 
 ## Setup
 
+### Clone the repository
+
+```bash
+git clone https://github.com/rostam-sodagari/ghostrelay.git
+cd ghostrelay
+```
+
 ### Prerequisites
 
 - shared hosting with Node.js support (cPanel, Plesk, DirectAdmin, etc.)
@@ -206,3 +213,9 @@ The host is terminating idle WebSocket connections. Decrease `PING_MS` in `.env.
 
 **`not SOCKS5 ver=N` errors on outbound**
 `TARGET_HOST:TARGET_PORT` is not pointing at a running xray exit server instance. Check `xray -c xray-exit.json` is running on the exit server.
+
+---
+
+## License
+
+[MIT](LICENSE)
