@@ -1,0 +1,81 @@
+{
+  "log": { "loglevel": "warning" },
+  "dns": {
+    "servers": [
+      { "address": "https+local://1.1.1.1/dns-query", "domains": [] },
+      "8.8.8.8"
+    ]
+  },
+  "inbounds": [
+    {
+      "tag": "socks-in",
+      "port": 1080,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": { "udp": true },
+      "sniffing": { "enabled": true, "destOverride": ["http", "tls"] }
+    },
+    {
+      "tag": "http-in",
+      "port": 8080,
+      "listen": "127.0.0.1",
+      "protocol": "http",
+      "sniffing": { "enabled": true, "destOverride": ["http", "tls"] }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "to-eu",
+      "protocol": "vless",
+      "settings": {
+        "vnext": [
+          {
+            "address": "your.relay-domain.com",
+            "port": 3000,
+            "users": [
+              {
+                "id": "your-uuid-here",
+                "encryption": "none",
+                "flow": ""
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": {
+          "path": "/vmess?side=client&secret=your-secret-key"
+        },
+        "sockopt": {
+          "tcpFastOpen": true,
+          "tcpNoDelay": true
+        }
+      },
+      "mux": {
+        "enabled": true,
+        "concurrency": 8
+      }
+    },
+    {
+      "tag": "blocked",
+      "protocol": "blackhole",
+      "settings": {}
+    }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "ip": ["geoip:private"],
+        "outboundTag": "blocked"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["socks-in", "http-in"],
+        "outboundTag": "to-eu"
+      }
+    ]
+  }
+}
