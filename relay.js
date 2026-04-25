@@ -56,29 +56,29 @@ server.on('upgrade', (req, socket, head) => {
   wss.handleUpgrade(req, socket, head, (ws) => {
     keepalive(ws);
 
-    if (side === 'eu') {
+    if (side === 'exit') {
       // Drain stale client queue first
       while (queue.length > 0) {
         const clientWs = queue.shift();
         if (clientWs.readyState === WebSocket.OPEN) {
-          log(`[relay] EU paired with queued client (pool: ${upstreamPool.length})`);
+          log(`[relay] exit paired with queued client (pool: ${upstreamPool.length})`);
           bridge(clientWs, ws);
           return;
         }
       }
 
       upstreamPool.push(ws);
-      log(`[relay] EU ready (pool: ${upstreamPool.length})`);
+      log(`[relay] exit ready (pool: ${upstreamPool.length})`);
 
       ws.on('close', () => {
         const i = upstreamPool.indexOf(ws);
         if (i !== -1) upstreamPool.splice(i, 1);
-        log(`[relay] EU gone (pool: ${upstreamPool.length})`);
+        log(`[relay] exit gone (pool: ${upstreamPool.length})`);
       });
-      ws.on('error', (e) => log('[relay] EU error:', e.message));
+      ws.on('error', (e) => log('[relay] exit error:', e.message));
 
     } else {
-      // Drain stale EU pool entries
+      // Drain stale exit pool entries
       let euWs = null;
       while (upstreamPool.length > 0) {
         const candidate = upstreamPool.shift();
@@ -89,7 +89,7 @@ server.on('upgrade', (req, socket, head) => {
         log(`[relay] client paired (pool: ${upstreamPool.length})`);
         bridge(ws, euWs);
       } else {
-        log('[relay] no EU available — queuing client');
+        log('[relay] no exit worker available — queuing client');
         queue.push(ws);
         ws.on('close', () => {
           const i = queue.indexOf(ws);

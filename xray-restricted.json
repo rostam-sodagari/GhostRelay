@@ -25,7 +25,7 @@
   ],
   "outbounds": [
     {
-      "tag": "to-eu",
+      "tag": "to-exit",
       "protocol": "vless",
       "settings": {
         "vnext": [
@@ -74,7 +74,7 @@
       {
         "type": "field",
         "inboundTag": ["socks-in", "http-in"],
-        "outboundTag": "to-eu"
+        "outboundTag": "to-exit"
       }
     ]
   }

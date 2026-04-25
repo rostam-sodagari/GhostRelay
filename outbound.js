@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * outbound.js — EU-side tunnel worker
+ * outbound.js — exit server tunnel worker
  *
  * Keeps POOL_SIZE WebSocket connections open to the relay.
- * Each worker: connect relay → connect xray EU VMess inbound → raw pipe → reconnect.
+ * Each worker: connect relay → connect xray exit server VMess inbound → raw pipe → reconnect.
  *
  * Traffic path:
- *   xray client (VLESS+WS) → relay (shared hosting) → outbound.js → xray EU (VMess TCP) → internet
+ *   xray client (VLESS+WS) → relay (shared hosting) → outbound.js → xray exit server (VMess TCP) → internet
  *
  * Usage: node outbound.js [env-file]   (defaults to .env.outbound)
  */

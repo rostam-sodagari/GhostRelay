@@ -6,10 +6,10 @@ A WebSocket relay that tunnels traffic through shared hosting — connects restr
 
 ---
 
-WebSocket relay tunnel. Your device connects directly to a shared hosting relay, which pipes traffic to an EU server that connects to the internet on your behalf.
+WebSocket relay tunnel. Your device connects directly to a shared hosting relay, which pipes traffic to an exit server that connects to the internet on your behalf.
 
 ```
-your device (xray/Hiddify) ──VLESS+WS──► relay (shared hosting) ──WS──► outbound.js (EU) ──TCP──► xray (EU) ──► internet
+your device (xray/Hiddify) ──VLESS+WS──► relay (shared hosting) ──WS──► outbound.js (exit server) ──TCP──► xray (exit server) ──► internet
 ```
 
 No restricted network needed. The relay on shared hosting is the only middleman.
@@ -20,13 +20,13 @@ No restricted network needed. The relay on shared hosting is the only middleman.
 
 | File | Machine | Purpose |
 |------|---------|---------|
-| `relay.js` | shared hosting | WebSocket relay — bridges client and EU worker connections |
+| `relay.js` | shared hosting | WebSocket relay — bridges client and exit worker connections |
 | `index.js` | shared hosting | Entry point — run via hosting Node.js panel |
-| `outbound.js` | EU server | Persistent worker pool — connects relay to xray EU |
-| `xray-eu.json` | EU server | xray config — VLESS TCP inbound → freedom outbound |
+| `outbound.js` | exit server | Persistent worker pool — connects relay to xray exit server |
+| `xray-exit.json` | exit server | xray config — VLESS TCP inbound → freedom outbound |
 | `xray-client.json` | your device | xray config — SOCKS5/HTTP proxy → VLESS+WS → relay |
 | `.env.relay` | shared hosting | Config for relay.js |
-| `.env.outbound` | EU server | Config for outbound.js |
+| `.env.outbound` | exit server | Config for outbound.js |
 
 > `xray-restricted.json` is kept as a reference for a restricted-network setup but is not required.
 
@@ -37,8 +37,8 @@ No restricted network needed. The relay on shared hosting is the only middleman.
 ### Prerequisites
 
 - shared hosting with Node.js support (cPanel, Plesk, DirectAdmin, etc.)
-- EU server with Node.js installed
-- xray-core installed on the EU server
+- exit server with Node.js installed
+- xray-core installed on the exit server
 - xray / Hiddify / v2rayNG on your device
 
 ### 1. Shared hosting (relay)
@@ -62,9 +62,9 @@ TUNNEL_SECRET=your-secret-key
 PING_MS=20000
 ```
 
-### 2. EU server
+### 2. Exit server
 
-Copy `outbound.js`, `.env.outbound`, and `xray-eu.json` to the EU server.
+Copy `outbound.js`, `.env.outbound`, and `xray-exit.json` to the exit server.
 
 ```bash
 npm install ws
@@ -73,7 +73,7 @@ npm install ws
 Start xray:
 
 ```bash
-xray -c xray-eu.json
+xray -c xray-exit.json
 ```
 
 Start the outbound worker pool:
@@ -95,7 +95,7 @@ The outbound reads `.env.outbound`:
 ```
 RELAY_HOST=your.relay-domain.com
 RELAY_PORT=3000
-RELAY_PATH=/vmess?side=eu&secret=your-secret-key
+RELAY_PATH=/vmess?side=exit&secret=your-secret-key
 TARGET_HOST=127.0.0.1
 TARGET_PORT=10800
 RECONNECT_SEC=2
@@ -140,18 +140,18 @@ Or enter manually:
 ## How it works
 
 1. Your device sends traffic through xray as VLESS over WebSocket to `your.relay-domain.com:3000`
-2. The relay on shared hosting pairs the connection with a waiting EU worker from the pre-connected pool
-3. The EU outbound worker forwards raw bytes to xray EU on `127.0.0.1:10800`
-4. xray EU decrypts VLESS, resolves the destination using `1.1.1.1`/`8.8.8.8`, and connects to the internet
+2. The relay on shared hosting pairs the connection with a waiting exit worker from the pre-connected pool
+3. The exit worker forwards raw bytes to xray exit server on `127.0.0.1:10800`
+4. xray exit server decrypts VLESS, resolves the destination using `1.1.1.1`/`8.8.8.8`, and connects to the internet
 
 ### Performance optimizations
 
 - **VLESS instead of VMess** — no per-chunk AES encryption overhead
 - **Mux** — 8 concurrent streams share one WebSocket connection
 - **TCP Fast Open + TCP No Delay** — reduces handshake RTT, disables Nagle buffering
-- **Pool of 16 pre-connected EU workers** — connections pair instantly, no setup delay
+- **Pool of 16 pre-connected exit workers** — connections pair instantly, no setup delay
 - **Backpressure** in outbound.js — pauses the faster side when the slower side's buffer fills
-- **DNS on EU** — domains resolved by Cloudflare/Google DNS in EU, not locally
+- **DNS on exit server** — domains resolved by Cloudflare/Google DNS on exit server, not locally
 
 ---
 
@@ -172,9 +172,9 @@ Or enter manually:
 |-----|---------|-------------|
 | `RELAY_HOST` | — | relay hostname |
 | `RELAY_PORT` | `3000` | relay port |
-| `RELAY_PATH` | `/` | WS path including `?side=eu&secret=...` |
-| `TARGET_HOST` | `127.0.0.1` | xray EU inbound host |
-| `TARGET_PORT` | `10800` | xray EU inbound port |
+| `RELAY_PATH` | `/` | WS path including `?side=exit&secret=...` |
+| `TARGET_HOST` | `127.0.0.1` | xray exit server inbound host |
+| `TARGET_PORT` | `10800` | xray exit server inbound port |
 | `POOL_SIZE` | `8` | Number of pre-connected workers |
 | `RECONNECT_SEC` | `2` | Seconds before reconnecting after a session ends |
 | `RELAY_TLS` | `0` | Set to `1` to use `wss://` |
@@ -189,7 +189,7 @@ Update in three places consistently:
 2. `.env.outbound` → `RELAY_PATH` (`?secret=...`)
 3. `xray-client.json` → `wsSettings.path` (`?secret=...`)
 
-The UUID `your-uuid-here` is the VLESS user ID shared between the client and `xray-eu.json`. Generate a new one with `xray uuid` if needed, and update it in both `xray-client.json` and `xray-eu.json`.
+The UUID `your-uuid-here` is the VLESS user ID shared between the client and `xray-exit.json`. Generate a new one with `xray uuid` if needed, and update it in both `xray-client.json` and `xray-exit.json`.
 
 ---
 
@@ -198,11 +198,11 @@ The UUID `your-uuid-here` is the VLESS user ID shared between the client and `xr
 **Stuck on connecting / port 3000 blocked**
 ISPs in restricted regions block non-standard ports. Put Cloudflare in front of `your.relay-domain.com` (proxied, orange cloud) and connect on port 443 with TLS enabled. Cloudflare will forward to your host on port 80 via Apache reverse proxy.
 
-**`no EU worker available` on relay**
+**`no exit worker available` on relay**
 All pool workers are busy or `outbound.js` is not running. Increase `POOL_SIZE` in `.env.outbound` or restart outbound.js.
 
 **Connection drops after ~20s idle**
 The host is terminating idle WebSocket connections. Decrease `PING_MS` in `.env.relay` to `15000`.
 
 **`not SOCKS5 ver=N` errors on outbound**
-`TARGET_HOST:TARGET_PORT` is not pointing at a running xray EU instance. Check `xray -c xray-eu.json` is running on the EU server.
+`TARGET_HOST:TARGET_PORT` is not pointing at a running xray exit server instance. Check `xray -c xray-exit.json` is running on the exit server.
