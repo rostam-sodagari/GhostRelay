@@ -1,0 +1,11 @@
+{
+  "name": "ghostrelay",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node relay.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
